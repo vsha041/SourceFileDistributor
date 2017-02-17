@@ -64,6 +64,7 @@ namespace UserInterface
         {
             MessageBox.Show(String.Format("Total time taken to distribute files: {0} milliseconds", e.Result));
             btnStart.Enabled = backgroundWorker.IsBusy == false;
+            Environment.Exit(0);
         }
     }
 }

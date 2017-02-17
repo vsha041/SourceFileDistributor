@@ -15,15 +15,18 @@ namespace Library
         private readonly string _destinationPath;
         private FileFilter _filesToIgnore;
         private FilePatternFilter _filePatternsToIgnore;
-        private static readonly SortedDictionary<string, Dictionary<string, string>> FolderAndFileNameMapping = new SortedDictionary<string, Dictionary<string, string>>(new PathSorter());
-        private static int _currentFolderCount;
-        private static int Max = 1000;
+        private readonly SortedDictionary<string, Dictionary<string, string>> _folderAndFileNameMapping;
+        private int _currentFolderCount;
+        private int Max = 1000;
 
         public Service(string extension, string sourcePath, string destinationPath)
         {
             _extension = extension;
             _sourcePath = sourcePath;
             _destinationPath = destinationPath;
+            _filesToIgnore = new FileFilter();
+            _filePatternsToIgnore = new FilePatternFilter();
+            _folderAndFileNameMapping = new SortedDictionary<string, Dictionary<string, string>>(new PathSorter());
         }
 
         public double Execute()
@@ -47,23 +50,27 @@ namespace Library
 
         private void Init()
         {
-            XmlDocument filesToIgnore = new XmlDocument();
-            filesToIgnore.Load("FilesToIgnore.xml");
-            var deserializedJsonFilesToIgnore = JsonConvert.SerializeXmlNode(filesToIgnore, Newtonsoft.Json.Formatting.Indented, true);
-            _filesToIgnore = JsonConvert.DeserializeObject<FileFilter>(deserializedJsonFilesToIgnore);
-            _filesToIgnore.AppendExtension(_extension);
-            _filesToIgnore.FilesToIgnoreDict = _filesToIgnore.FilesToIgnore.ToDictionary(x => x, x => x, StringComparer.OrdinalIgnoreCase);
-
-            var filePatternsToIgnore = new XmlDocument();
-            filePatternsToIgnore.Load("FilePatternsToIgnore.xml");
-            var deserializedJsonFilePatternsToIgnore = JsonConvert.SerializeXmlNode(filePatternsToIgnore, Newtonsoft.Json.Formatting.Indented, true);
-            _filePatternsToIgnore = JsonConvert.DeserializeObject<FilePatternFilter>(deserializedJsonFilePatternsToIgnore);
-            _filePatternsToIgnore.FilePatternToIgnoreDict = _filePatternsToIgnore.FilePatternsToIgnore.ToDictionary(x => x, x => x, StringComparer.OrdinalIgnoreCase);
+            LoadFilePatterns("FilesToIgnore.xml", ref _filesToIgnore);
+            LoadFilePatterns("FilePatternsToIgnore.xml", ref _filePatternsToIgnore);
 
             for (int i = 0; i < Max; i++)
             {
-                FolderAndFileNameMapping.Add(GetNextFolderName(), new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+                _folderAndFileNameMapping.Add(GetNextFolderName(), new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
             }
+        }
+
+        private void LoadFilePatterns<TFilter>(string fileName, ref TFilter filter)
+            where TFilter : IFilter
+        {
+            if (fileName == null) throw new ArgumentNullException(nameof(fileName));
+            if (filter == null) throw new ArgumentNullException(nameof(filter));
+
+            var toIgnore = new XmlDocument();
+            toIgnore.Load(fileName);
+            var deserializedJsonFilesToIgnore = JsonConvert.SerializeXmlNode(toIgnore, Newtonsoft.Json.Formatting.Indented, true);
+            filter = JsonConvert.DeserializeObject<TFilter>(deserializedJsonFilesToIgnore);
+            filter.AppendExtension(_extension);
+            filter.ToIgnoreDict = filter.ToIgnore.ToDictionary(x => x, x => x, StringComparer.OrdinalIgnoreCase);
         }
 
         private string GetCurrentFolderName()
@@ -92,7 +99,7 @@ namespace Library
 
         private bool DoesFileNameMatchesNotAllowedPatterns(string fileName)
         {
-            foreach (var pattern in _filePatternsToIgnore.FilePatternToIgnoreDict.Keys)
+            foreach (var pattern in _filePatternsToIgnore.ToIgnoreDict.Keys)
             {
                 if (fileName.ContainsIgnoreCase(pattern))
                     return true;
@@ -105,11 +112,11 @@ namespace Library
             foreach (Data data in files)
             {
                 // Sorted Dictionary : FolderAndFileNameMapping - key : folder name, value : listOfFileNames
-                foreach (string key in FolderAndFileNameMapping.Keys)
+                foreach (string key in _folderAndFileNameMapping.Keys)
                 {
-                    Dictionary<string, string> listOfFileNames = FolderAndFileNameMapping[key];
+                    Dictionary<string, string> listOfFileNames = _folderAndFileNameMapping[key];
 
-                    if (_filesToIgnore.FilesToIgnoreDict.ContainsKey(data.Name) == false
+                    if (_filesToIgnore.ToIgnoreDict.ContainsKey(data.Name) == false
                         &&
                         DoesFileNameMatchesNotAllowedPatterns(data.Name) == false
                         &&
@@ -126,10 +133,10 @@ namespace Library
 
         private void WriteToDisk()
         {
-            foreach (string key in FolderAndFileNameMapping.Keys)
+            foreach (string key in _folderAndFileNameMapping.Keys)
             {
                 string targetDirectoryPath = key;
-                Dictionary<string, string> filePaths = FolderAndFileNameMapping[key];
+                Dictionary<string, string> filePaths = _folderAndFileNameMapping[key];
                 if (filePaths == null || filePaths.Count == 0)
                     return;
 
