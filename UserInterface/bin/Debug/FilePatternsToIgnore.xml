@@ -1,3 +1,0 @@
-﻿<FilePatternFilter xmlns:json="http://james.newtonking.com/projects/json">
-  <FilePatternsToIgnore json:Array='true'>TemporaryGeneratedFile</FilePatternsToIgnore>
-</FilePatternFilter>

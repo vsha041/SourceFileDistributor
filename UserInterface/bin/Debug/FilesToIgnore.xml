@@ -1,4 +1,0 @@
-﻿<FileFilter xmlns:json="http://james.newtonking.com/projects/json">
-  <FilesToIgnore>ABCDEFGHIJKLMNOPQRSTUVWXYZ.cs</FilesToIgnore>
-  <FilesToIgnore>ABCDEFGHIJKLMNOPQRSTUVWXYZ1.cs</FilesToIgnore>
-</FileFilter>
