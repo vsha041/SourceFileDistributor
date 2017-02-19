@@ -11,7 +11,7 @@ namespace Library.Tests
         [TestMethod]
         public void CheckIfNumberOfSourceFilesEqualsDistributedFiles()
         {
-            string sourcePath = @"C:\Projects\Repos\SourceFileDistributor\Library.Tests\TestFiles";
+            string sourcePath = @"..\..\..\Library.Tests\TestFiles";
             var path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
                     +
                     @"\"
